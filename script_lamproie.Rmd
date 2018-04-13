@@ -1,0 +1,50 @@
+---
+title: "script_lamproie"
+author: "C. Tentelier"
+date: "29 mars 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Analyse des données de capture-marquage-recapture de lamproie marine en Garonne-Dordogne 2018
+
+## Taux d'exloitation
+
+Ici, on calcule la probabilité de capture cumulée sur toute la durée de l'étude.
+
+```{r}
+library(rstan)
+inits<-list(list(p_survive=0.6,p_loss=0.6,p_catch=0.6,p_return=0.6,Pop=c(10000,500000)),list(p_survive=0.4,p_loss=0.4,p_catch=0.4,p_return=0.4,Pop=c(11000,480000)))
+fit<-stan(file = "modele_lamproie.stan", 
+          data=list("r"=2,"Marked"=c(250,250), "Rec_t"=c(80,75),"Rec_a"=c(8,5),"Rec_p"=c(7,6),
+                    "Effort"=c(116,2035),"Capt"=c(1740,48437),"Rec_Philippe"=15,"Capt_Philippe"=500),
+          iter=1000, chains = 2,
+          init=inits)
+print(fit,pars=c("p_survive","p_loss","p_catch","p_return","Pop"))
+```
+
+
+Ici, on calcule la capturabilité pour chaque jour de la manip.
+
+```{r}
+library(rstan)
+inits<-list(list(alpha=1,beta=1,catchability=rep(0.001,10)),list(alpha=0.5,beta=0.5,catchability=rep(0.001,10)))
+fit<-stan(file = "day_by_day.stan", 
+          data=list("days"=10,"marked"=100, "recaptured"=c(0,10,12,9,8,5,5,2,0,0),"effort"=rep(10,10)),
+          iter=1000, chains = 2,
+          init=inits)
+print(fit,pars=c("alpha","beta","catchability","p_capture","exploitation_rate"))
+```
+
+
+## Dynamique de capture
+Ici, on représente la dynamique de capture des individus marqués. En particulier, cette analyse permet de voir la dynamique de migration.
+Plot du nombre de captures en fonction de la date, pour chaque site de capture.
+```{r , echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
